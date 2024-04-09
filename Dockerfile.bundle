@@ -1,0 +1,33 @@
+# Stage 1: Building the code
+FROM node:16-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+# Stage 2: Creating the executable
+FROM node:16-alpine AS pkg
+
+WORKDIR /app
+
+COPY --from=builder /app .
+
+RUN npm install -g pkg
+RUN pkg --targets node16-linux-x64 dist/app.bundle.js -o app.bundle
+
+# Stage 3: Creating a minimal container with only the executable
+FROM debian:stable-slim
+
+WORKDIR /app
+
+COPY --from=pkg /app/app.bundle .
+
+EXPOSE 31702
+
+CMD ["./app.bundle"]
